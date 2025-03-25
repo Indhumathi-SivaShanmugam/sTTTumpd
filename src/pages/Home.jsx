@@ -10,7 +10,7 @@ const Home = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1 }}
       >
-        🏏 Welcome to Stumped!
+      🏏 Welcome to sTTTump'd!
       </motion.h1>
 
       <motion.p
