@@ -1,16 +1,32 @@
-<<<<<<< HEAD
-# sTTTumpd
-=======
-# React + Vite
+# sTTTump'd
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+sTTTump'd is a **live cricket match tracking** platform developed for **university-level** cricket events. It provides real-time score updates using Firebase and is designed to display live match details, including scores, wickets, overs, run rates, and toss decisions. The project ensures offline accessibility by caching previously fetched data.
 
-Currently, two official plugins are available:
+## Scope
+- Provides **real-time** updates for live cricket matches.
+- Stores and retrieves match data from **Firebase Firestore**.
+- Implements **offline support** using IndexedDB and the Cache API.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
+- **Frontend:** React, Tailwind CSS
+- **Backend:** Firebase Firestore
+- **Offline Support:** Service Workers, IndexedDB
+- **Animations & Icons:** Framer Motion, React Icons
 
-## Expanding the ESLint configuration
+## Current Progress
+✅ Real-time Firestore integration  
+✅ Live data updates for matches  
+✅ Offline support (caches last fetched data)  
+✅ Admin panel for match updates  
+🔜 Multi-match tracking & improved UI  
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
->>>>>>> fc5d6d5 (Initial setup with Vite + React)
+## Future Enhancements
+- **Multi-match setup** to support multiple ongoing matches.
+- **Enhanced offline functionality**, ensuring smoother data retrieval without connectivity.
+- **Better data visualization** with graphs and detailed insights.
+- **Push notifications** for live score updates.
+- **WhatsApp bot** for match reminders and highlights.
+
+## Live Demo
+Check out the live version here: [sTTTump'd on Vercel](https://stttumpd.vercel.app/)
+
