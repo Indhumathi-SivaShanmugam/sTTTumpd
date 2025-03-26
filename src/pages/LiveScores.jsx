@@ -1,24 +1,48 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase.js";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { FaBaseballBall } from "react-icons/fa";
 
 const LiveScores = () => {
   const [matchData, setMatchData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [offlineMode, setOfflineMode] = useState(false);
 
   useEffect(() => {
     const matchDocRef = doc(db, "matches", "match_SNUvsSSN");
-    const unsubscribe = onSnapshot(matchDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setMatchData(docSnap.data());
+
+    const unsubscribe = onSnapshot(
+      matchDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setMatchData(docSnap.data());
+          setOfflineMode(false); // Reset offline mode if data is received
+        } else {
+          setMatchData(null);
+        }
         setLoading(false);
-      } else {
-        setMatchData(null);
-        setLoading(false);
+      },
+      (error) => {
+        console.error("Firestore error:", error);
+        setOfflineMode(true);
+        fetchCachedData();
       }
-    });
+    );
+
+    // Function to fetch cached data when offline
+    const fetchCachedData = async () => {
+      try {
+        const cachedDoc = await getDoc(matchDocRef);
+        if (cachedDoc.exists()) {
+          setMatchData(cachedDoc.data());
+        }
+      } catch (err) {
+        console.error("Error fetching cached data:", err);
+      }
+      setLoading(false);
+    };
+
     return () => unsubscribe();
   }, []);
 
@@ -55,14 +79,20 @@ const LiveScores = () => {
       >
         <FaBaseballBall /> Live Cricket Match
       </motion.h2>
-      
+
+      {offlineMode && (
+        <p className="text-center text-yellow-400 font-semibold">
+          ⚠️ You are offline. Displaying last cached data.
+        </p>
+      )}
+
       <p className="text-lg font-semibold text-center text-gray-300">{team1} vs {team2}</p>
       <p className="text-center text-yellow-400 font-bold">Status: {status}</p>
       <p className="text-center text-gray-300 mt-2">Toss: {toss_winner} won the toss and chose to {toss_decision}</p>
-      
+
       <div className="mt-6">
         <p className="font-bold text-lg text-blue-400">{team1} Batting</p>
-        <motion.p 
+        <motion.p
           className="text-3xl font-bold"
           animate={{ scale: [1, 1.1, 1] }}
           transition={{ duration: 0.5, repeat: Infinity }}
@@ -71,7 +101,7 @@ const LiveScores = () => {
         </motion.p>
         <p className="text-gray-300">Run Rate: {runrate_team1}</p>
       </div>
-      
+
       <div className="mt-6">
         <p className="font-bold text-lg text-red-400">{team2} Bowling</p>
         <p className="text-3xl font-bold">{score_team2}/{wickets_team2} ({overs_team2} ov)</p>
