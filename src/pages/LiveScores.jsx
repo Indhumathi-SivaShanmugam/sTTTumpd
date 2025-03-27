@@ -65,7 +65,7 @@ const LiveScores = () => {
 
   return (
     <div className="max-w-lg mx-auto mt-10 p-6 bg-gradient-to-br from-blue-900 to-black text-white rounded-lg shadow-lg animate-fadeIn">
-      <h2 className="text-2xl font-bold text-center mb-4">Select Match to Enter Live Data</h2>
+      <h2 className="text-2xl font-bold text-center mb-4">Select Match to View Live Data</h2>
       <select
         className="w-full p-2 text-black rounded-md mb-4"
         value={selectedMatch}
