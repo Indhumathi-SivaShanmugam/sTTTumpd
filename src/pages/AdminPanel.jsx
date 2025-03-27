@@ -1,110 +1,191 @@
+import { collection, doc, onSnapshot, setDoc, deleteDoc, Timestamp } from "firebase/firestore";
+import { db } from "../firebase";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
-import { db } from "../firebase"; // Ensure correct import
 
 const AdminPanel = () => {
-  const navigate = useNavigate();
-  const [matchData, setMatchData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [editableData, setEditableData] = useState({});
+  const [matches, setMatches] = useState([]);
+  const [newMatchId, setNewMatchId] = useState("");
+  const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newMatchData, setNewMatchData] = useState({
+    match_id: "",
+    team1: "",
+    team2: "",
+    venue: "",
+    date: "",
+    status: "Upcoming",
+    toss_winner: "",
+    toss_decision: "",
+    score_team1: "0",
+    score_team2: "0",
+    wickets_team1: 0,
+    wickets_team2: 0,
+    overs_team1: 0,
+    overs_team2: 0,
+    runrate_team1: 0,
+    runrate_team2: 0,
+    total_overs: 20,
+  });
 
+  // Fetch all matches from Firestore and auto-update status
   useEffect(() => {
-    const isAdmin = localStorage.getItem("isAdmin");
-    if (isAdmin !== "true") {
-      alert("🚫 Unauthorized access! Redirecting to home.");
-      navigate("/");
+    const unsubscribe = onSnapshot(collection(db, "matches"), (snapshot) => {
+      const currentTime = Timestamp.now();
+      const updatedMatches = snapshot.docs.map((doc) => {
+        const match = { id: doc.id, ...doc.data() };
+
+        // Auto-update match status to "Live" if timestamp is met
+        if (match.status === "Upcoming" && match.date.seconds <= currentTime.seconds) {
+          setDoc(doc.ref, { status: "Live" }, { merge: true });
+          match.status = "Live";
+        }
+        return match;
+      });
+
+      setMatches(updatedMatches);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Update match details
+  const updateMatch = async (id, updatedData) => {
+    await setDoc(doc(db, "matches", id), updatedData, { merge: true });
+  };
+
+  // Add a new match
+  const addMatch = async () => {
+    if (!newMatchId.trim() || !newMatchData.date.trim()) {
+      alert("Match ID and Date cannot be empty!");
       return;
     }
 
-    const matchDocRef = doc(db, "matches", "match_SNUvsSSN");
-    const unsubscribe = onSnapshot(
-      matchDocRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setMatchData(data);
-          setEditableData(data); // Initialize editable fields
-        } else {
-          setMatchData(null);
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error fetching match data:", error);
-        setLoading(false);
-      }
-    );
+    const matchTimestamp = Timestamp.fromDate(new Date(newMatchData.date));
 
-    return () => unsubscribe();
-  }, [navigate]);
+    await setDoc(doc(db, "matches", newMatchId), {
+      ...newMatchData,
+      date: matchTimestamp,
+    });
 
-  // Handle input changes
-  const handleInputChange = (key, value) => {
-    setEditableData((prevData) => ({
-      ...prevData,
-      [key]: value,
-    }));
+    setNewMatchId("");
+    setNewMatchData({
+      match_id: "",
+      team1: "",
+      team2: "",
+      venue: "",
+      date: "",
+      status: "Upcoming",
+      toss_winner: "",
+      toss_decision: "",
+      score_team1: "0",
+      score_team2: "0",
+      wickets_team1: 0,
+      wickets_team2: 0,
+      overs_team1: 0,
+      overs_team2: 0,
+      runrate_team1: 0,
+      runrate_team2: 0,
+      total_overs: 20,
+    });
   };
 
-  // Update Firestore
-  const handleSaveChanges = async () => {
-    try {
-      const matchDocRef = doc(db, "matches", "match_SNUvsSSN");
-      await updateDoc(matchDocRef, editableData);
-      alert("✅ Match data updated successfully!");
-    } catch (error) {
-      console.error("Error updating match data:", error);
-      alert("❌ Failed to update match data.");
+  // Delete a match
+  const deleteMatch = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this match?");
+    if (confirmDelete) {
+      await deleteDoc(doc(db, "matches", id));
     }
   };
 
   return (
-    <div className="p-6 bg-gray-900 text-white min-h-screen flex flex-col items-center">
-      <h2 className="text-3xl font-bold mb-6">⚙️ Admin Panel</h2>
+    <div>
+      <h2>Admin Panel</h2>
 
-      {loading ? (
-        <p className="text-gray-400">Loading match data...</p>
-      ) : matchData ? (
-        <div className="bg-gray-800 p-4 rounded-lg shadow-lg text-left w-full max-w-lg">
-          {Object.entries(editableData).map(([key, value]) => (
-            <div key={key} className="mb-3">
-              <label className="block font-semibold text-sm">{key}:</label>
-              <input
-                type="text"
-                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                value={value}
-                onChange={(e) => handleInputChange(key, e.target.value)}
-              />
-            </div>
-          ))}
-          <button
-            className="mt-4 bg-green-500 px-6 py-2 rounded-lg hover:bg-green-700 transition-all w-full"
-            onClick={handleSaveChanges}
-          >
-            💾 Save Changes
-          </button>
+      {/* Display Sections */}
+      <div>
+        <h3>Upcoming Matches</h3>
+        {matches.filter((match) => match.status === "Upcoming").length === 0 ? (
+          <p>No upcoming matches</p>
+        ) : (
+          matches
+            .filter((match) => match.status === "Upcoming")
+            .map((match) => (
+              <p key={match.id}>
+                {match.team1} vs {match.team2} - {match.venue} ({new Date(match.date.seconds * 1000).toLocaleString()}) 
+                <button onClick={() => deleteMatch(match.id)}>🗑️ Delete</button>
+              </p>
+            ))
+        )}
+
+        <h3>Live Matches</h3>
+        {matches.filter((match) => match.status === "Live").length === 0 ? (
+          <p>No live matches</p>
+        ) : (
+          matches
+            .filter((match) => match.status === "Live")
+            .map((match) => (
+              <p key={match.id}>
+                {match.team1} vs {match.team2} - {match.venue} (Live) 
+                <button onClick={() => deleteMatch(match.id)}>🗑️ Delete</button>
+              </p>
+            ))
+        )}
+      </div>
+
+      {/* Options: Create Match or Edit Live Match */}
+      <div>
+        <h3>Create New Match</h3>
+        <input type="text" placeholder="Match ID" value={newMatchId} onChange={(e) => setNewMatchId(e.target.value)} />
+        <input type="text" placeholder="Team 1" value={newMatchData.team1} onChange={(e) => setNewMatchData({ ...newMatchData, team1: e.target.value })} />
+        <input type="text" placeholder="Team 2" value={newMatchData.team2} onChange={(e) => setNewMatchData({ ...newMatchData, team2: e.target.value })} />
+        <input type="text" placeholder="Venue" value={newMatchData.venue} onChange={(e) => setNewMatchData({ ...newMatchData, venue: e.target.value })} />
+        <input type="datetime-local" value={newMatchData.date} onChange={(e) => setNewMatchData({ ...newMatchData, date: e.target.value })} />
+        <input type="number" placeholder="Total Overs" value={newMatchData.total_overs} onChange={(e) => setNewMatchData({ ...newMatchData, total_overs: e.target.value })} />
+        <button onClick={addMatch}>Add Match</button>
+      </div>
+
+      <div>
+        <h3>Select Match to Edit Live Data</h3>
+        <select onChange={(e) => setSelectedMatchId(e.target.value)} value={selectedMatchId || ""}>
+          <option value="" disabled>Select a match</option>
+          {matches
+            .filter((match) => match.status === "Live")
+            .map((match) => (
+              <option key={match.id} value={match.id}>
+                {match.team1} vs {match.team2} ({match.venue})
+              </option>
+            ))}
+        </select>
+        <button onClick={() => setIsEditing(true)} disabled={!selectedMatchId}>
+          Edit Live Scores
+        </button>
+      </div>
+
+      {/* Edit Live Match Scores */}
+      {isEditing && selectedMatchId && (
+        <div>
+          <h3>Edit Live Match Scores</h3>
+          {matches
+            .filter((match) => match.id === selectedMatchId)
+            .map((match) => (
+              <div key={match.id}>
+                <h4>{match.team1} vs {match.team2} ({match.venue})</h4>
+                <label>Status:</label>
+                <select value={match.status} onChange={(e) => updateMatch(match.id, { status: e.target.value })}>
+                  <option value="Live">Live</option>
+                  <option value="Completed">Completed</option>
+                </select>
+                <label>Score {match.team1}:</label>
+                <input type="number" value={match.score_team1} onChange={(e) => updateMatch(match.id, { score_team1: e.target.value })} />
+                <label>Wickets {match.team1}:</label>
+                <input type="number" value={match.wickets_team1} onChange={(e) => updateMatch(match.id, { wickets_team1: e.target.value })} />
+                <label>Overs {match.team1}:</label>
+                <input type="number" value={match.overs_team1} onChange={(e) => updateMatch(match.id, { overs_team1: e.target.value })} />
+                <button onClick={() => setIsEditing(false)}>Done Editing</button>
+              </div>
+            ))}
         </div>
-      ) : (
-        <p className="text-red-400">No match data available.</p>
       )}
-
-      <button
-        className="mt-4 bg-blue-500 px-6 py-2 rounded-lg hover:bg-blue-700 transition-all"
-        onClick={() => navigate("/")}
-      >
-        🔙 Go Back to Home
-      </button>
-
-      <button
-        className="mt-4 bg-red-500 px-6 py-2 rounded-lg hover:bg-red-700 transition-all"
-        onClick={() => {
-          localStorage.removeItem("isAdmin");
-          navigate("/admin-login");
-        }}
-      >
-        🔓 Logout
-      </button>
     </div>
   );
 };
